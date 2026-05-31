@@ -184,6 +184,7 @@ export default function Home() {
                         <button
                           onClick={handleClearOutput}
                           className="font-mono text-xs uppercase tracking-wider px-2 md:px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors"
+                          title="Clear output"
                         >
                           Clear
                         </button>
@@ -223,7 +224,7 @@ export default function Home() {
                       </pre>
                     ) : isExtracting ? (
                       /* Loading skeleton for markdown output */
-                      <div className="p-4 md:p-6 space-y-3">
+                      <div className="p-4 md:p-6 space-y-3 animate-pulse">
                         <div className="flex items-center gap-2 mb-4">
                           <div className="w-4 h-4 bg-gray-200 animate-pulse" />
                           <div className="h-3 w-32 bg-gray-200 animate-pulse" />

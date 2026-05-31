@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface DashboardProps {
@@ -15,6 +15,26 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Auto-focus URL input on mount
+  useEffect(() => {
+    const input = document.querySelector<HTMLInputElement>('input[type="text"]');
+    input?.focus();
+  }, []);
+
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to clear input
+      if (e.key === 'Escape' && url && !isExtracting) {
+        setUrl('');
+        setUrlError(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [url, isExtracting]);
 
   const isValidUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
@@ -70,16 +90,22 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
                 placeholder="https://example.com"
                 className={`input-brutal flex-1 text-sm md:text-base ${urlError ? '!border-red-600' : ''}`}
                 disabled={isExtracting}
-                autoFocus
                 onChange={(e) => {
                   const value = e.target.value;
                   setUrl(value);
                   setUrlError(value.trim() ? !isValidUrl(value) : false);
                 }}
+                onKeyDown={(e) => {
+                  // Cmd/Ctrl + Enter to submit
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && url.trim() && !urlError) {
+                    e.preventDefault();
+                    onExtract(url.trim());
+                  }
+                }}
               />
               <button
                 type="submit"
-                className={`btn-brutal border-l-0 text-xs md:text-sm ${isExtracting ? 'opacity-50 cursor-not-allowed' : 'btn-brutal-primary'}`}
+                className={`btn-brutal border-l-0 text-xs md:text-sm bg-red-600 text-white border-red-600 hover:bg-black hover:border-black ${isExtracting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={isExtracting || !url.trim() || urlError}
               >
                 {isExtracting ? (
@@ -99,6 +125,11 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
             <span className="hidden sm:inline">
               {urlError ? (
                 <span className="text-red-600 font-mono">URL must start with http:// or https://</span>
+              ) : url ? (
+                <span className="text-green-600 font-mono flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 bg-green-600 rounded-full" />
+                  Press ⌘+Enter to extract
+                </span>
               ) : (
                 'Enter a live URL to extract its design system'
               )}
@@ -106,6 +137,8 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
             <span className="sm:hidden">
               {urlError ? (
                 <span className="text-red-600 font-mono">Invalid URL</span>
+              ) : url ? (
+                <span className="text-green-600 font-mono">⌘+Enter to go</span>
               ) : (
                 'Extract design system from URL'
               )}
@@ -115,6 +148,7 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
                 type="button"
                 onClick={handleClear}
                 className="font-mono uppercase tracking-wider hover:text-red-600 transition-colors"
+                title="Clear input (Esc)"
               >
                 Clear
               </button>
