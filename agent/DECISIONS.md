@@ -1,173 +1,185 @@
 # DECISIONS.md
 
-## Architectural Decisions
+## Purpose
 
-### 1. Next.js App Router over Pages Router
-**Decision**: Use Next.js 16 App Router (app directory)
+This file records **why key architectural and product decisions were made**.
 
-**Rationale**:
-- Modern React patterns (Server Components, Server Actions)
-- Better streaming support for extraction response
-- File-based routing with layouts
-- Future-proof architecture
+It exists to prevent future AI agents or developers from:
 
-**Status**: ✅ Implemented
+* reintroducing rejected ideas
+* changing stable system architecture without reason
+* losing context on why trade-offs were made
 
----
-
-### 2. Tailwind CSS for Styling
-**Decision**: Use Tailwind CSS 4 for all styling
-
-**Rationale**:
-- Rapid UI development
-- Consistent design system
-- Easy responsive breakpoints
-- Built-in dark mode support (unused but available)
-
-**Status**: ✅ Implemented
+It does NOT describe implementation details.
 
 ---
 
-### 3. Puppeteer for Browser Automation
-**Decision**: Use Puppeteer for content extraction
+## 1. Next.js App Router
 
-**Rationale**:
-- Full JavaScript execution support
-- Screenshot capture capability
-- Wait for network idle
-- Headless operation
+**Decision**: Use Next.js App Router (app directory)
+
+**Why**:
+
+* Supports modern React architecture (Server Components)
+* Enables streaming responses for extraction workflow
+* Better long-term scalability than Pages Router
+
+**Status**: Approved and implemented
+
+---
+
+## 2. Tailwind CSS
+
+**Decision**: Use Tailwind CSS for styling
+
+**Why**:
+
+* Enables rapid UI iteration
+* Reduces need for custom CSS architecture
+* Keeps styling consistent across components
+
+**Status**: Approved and implemented
+
+---
+
+## 3. Puppeteer for Extraction
+
+**Decision**: Use Puppeteer for web content extraction
+
+**Why**:
+
+* Required for JavaScript-rendered pages
+* Enables screenshot capture
+* More reliable than HTTP-only scraping for modern websites
 
 **Trade-offs**:
-- Heavy dependency (chromium binary ~170MB)
-- Slower than simple HTTP fetching
-- Memory intensive
 
-**Status**: ✅ Implemented
+* Heavy dependency (Chromium required)
+* Higher memory usage
+* Slower than lightweight scraping approaches
 
----
-
-### 4. Streaming Response for Extraction
-**Decision**: Stream extraction content back to client
-
-**Rationale**:
-- Better UX (content appears progressively)
-- Can handle large documents
-- Connection stays alive during extraction
-
-**Implementation**: 
-- API route uses ReadableStream
-- Client-side uses fetch with readable streams
-
-**Status**: ✅ Implemented
+**Status**: Approved and implemented
 
 ---
 
-### 5. Brutalist UI Design
-**Decision**: Use brutalist design aesthetic
+## 4. Streaming Extraction Response
 
-**Rationale**:
-- Differentiation from polished SaaS products
-- High contrast for accessibility
-- Hard edges fit the "design tool" persona
-- Memorable visual identity
+**Decision**: Stream extraction results to client
 
-**Design Elements**:
-- Thick black borders (3px)
-- Hard drop shadows (8px offset, no blur)
-- Minimal border-radius
-- Bold typography
-- Limited color palette (black, white, red accent)
+**Why**:
 
-**Status**: ✅ Implemented
+* Improves perceived performance
+* Supports large documents without blocking UI
+* Enables progressive rendering of results
 
----
+**Alternative Considered**:
 
-### 6. Independent Panel Scrolling
-**Decision**: Each panel (Output, Preview) scrolls independently
+* Batch response (fully processed result only)
 
-**Rationale**:
-- User can scroll output while keeping preview in view
-- Dashboard stays accessible at top
-- Sticky elements work within scroll context
+**Why rejected**:
 
-**Implementation**:
-- `overflow-auto` on panel content divs
-- `max-height: calc(100vh - 180px)` limits height
-- Flex layout for proper height distribution
+* Worse user experience for long-running extractions
 
-**Status**: ✅ Implemented
+**Status**: Implemented
 
 ---
 
-### 7. Sticky Floating Download Button
-**Decision**: Download button appears when header scrolls off-screen
+## 5. Brutalist Design Direction
 
-**Rationale**:
-- Download action always accessible
-- No need to scroll back to top
-- Visual indication of available action
+**Decision**: Use a brutalist visual design system
 
-**Implementation**:
-- `position: sticky` inside scrollable container
-- `headerRef` tracks header position
-- `panelScrollRef` detects scroll within container
-- Shows when `headerRect.bottom < containerRect.top`
-- Hides when header comes back into view
+**Why**:
 
-**Status**: ✅ Implemented
+* Distinct product identity
+* High contrast improves readability
+* Aligns with “developer tool” positioning
 
----
+**Alternative Considered**:
 
-### 8. Mobile-First Responsive Layout
-**Decision**: Design for mobile first, enhance for desktop
+* Standard SaaS polished UI
 
-**Rationale**:
-- Better performance on constrained devices
-- Progressive enhancement approach
-- Easier to add complexity than remove it
+**Why rejected**:
 
-**Breakpoints**:
-- Default: Mobile (grid-cols-1)
-- sm: Small tablets (still single column)
-- lg: Desktop (grid-cols-2 side-by-side)
+* Too generic
+* Lacks product differentiation
 
-**Status**: ✅ Implemented
+**Status**: Implemented
 
 ---
 
-## Rejected Approaches
+## 6. Independent Panel Scrolling UX
 
-### 1. Client-Side Only Extraction
-**Rejected in favor of**: Server-side API route
+**Decision**: Panels scroll independently within the layout
 
-**Reason**: 
-- Extraction requires Node.js (Puppeteer)
-- API keys may be needed for some URLs
-- Security concerns with exposing extraction logic
+**Why**:
 
-### 2. Sticky Panel Headers
-**Rejected in favor of**: Headers scroll with content, floating button shows
+* Allows users to compare output and preview simultaneously
+* Keeps main dashboard accessible at all times
+* Improves usability for long documents
 
-**Reason**:
-- Complexity of managing multiple sticky elements
-- Conflicting scroll contexts
-- Current approach provides better UX
+**Alternative Considered**:
 
-### 3. Local Storage Persistence
-**Rejected in favor of**: Session-only content
+* Full page scrolling layout
 
-**Reason**:
-- Privacy concerns
-- Storage quota limits
-- Complexity of managing versioned content
-- Not requested by users
+**Why rejected**:
+
+* Poor multi-panel usability
+* Harder to navigate long outputs
+
+**Status**: Implemented
+
+---
+
+## 7. Mobile-First Design Approach
+
+**Decision**: Mobile-first responsive design strategy
+
+**Why**:
+
+* Ensures baseline usability on all devices
+* Forces simpler UI decisions early
+* Improves performance and accessibility
+
+**Alternative Considered**:
+
+* Desktop-first design
+
+**Why rejected**:
+
+* Would require more refactoring for mobile compatibility
+
+**Status**: Implemented
+
+---
+
+## Rejected System Designs
+
+### Client-side extraction
+
+Rejected due to:
+
+* lack of server-side capabilities (Puppeteer required)
+* security limitations
+* unreliable browser execution environment
+
+---
+
+### Persistent storage of results
+
+Rejected due to:
+
+* increased system complexity
+* privacy considerations
+* no current user requirement
 
 ---
 
 ## Future Considerations
 
-1. **Persistent storage**: Could add localStorage or database for saving extractions
-2. **Multiple format export**: PDF, HTML alongside Markdown
-3. **Batch extraction**: Process multiple URLs at once
-4. **Custom extraction rules**: User-defined selectors
-5. **API authentication**: For private design documents
+These are NOT decisions, but potential future directions:
+
+* Add authentication for private URLs
+* Support multiple export formats (PDF, HTML)
+* Batch URL processing
+* Custom extraction rules per site
+* Persistent storage for saved extractions
