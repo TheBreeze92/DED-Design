@@ -10,9 +10,9 @@ v0.1.0 - Initial Release
 
 The system is currently focused on:
 
-* Improving error handling for failed URL extraction
+* v1.0.0 has shipped — all core features are merged to main and deployed
 
-All AI work should prioritise this area first.
+All AI work should prioritise stabilisation and testing over new features unless explicitly requested.
 
 Do NOT introduce unrelated features unless explicitly requested.
 
@@ -22,10 +22,10 @@ Do NOT introduce unrelated features unless explicitly requested.
 
 All development work must follow this order:
 
-1. Error handling improvements
-2. Loading states and UI feedback
-3. Copy to clipboard functionality
-4. UX polish and minor improvements
+1. ~~Error handling improvements~~ ✅ Done
+2. ~~Loading states and UI feedback~~ ✅ Done
+3. ~~Copy to clipboard functionality~~ ✅ Done
+4. UX polish and minor improvements — In Progress
 5. New feature development
 
 If a task does not fit into this order, it is LOW PRIORITY.
@@ -36,25 +36,30 @@ If a task does not fit into this order, it is LOW PRIORITY.
 
 ### In Progress
 
-* Improve error handling for Puppeteer extraction failures
+* Broader testing and bug fixes for v1.0.0
 
 ### Not Started
 
-* Loading states (skeletons / spinners)
-* Copy extracted content to clipboard
+* v0.2.0 feature development (extraction history, persistent storage, section-specific copy, keyboard shortcuts)
 
 ---
 
 ## Completed Features
 
 * URL input & validation
-* Content extraction (Puppeteer + Cheerio)
+* Content extraction (Puppeteer + context.dev API)
 * Markdown generation (streaming)
 * Screenshot capture
 * Scrollable UI panels
-* Sticky download button
+* Sticky headers (Copy/Download buttons stay visible)
 * Mobile responsive layout
 * Extract button UI styling
+* Error handling with actionable messages (missing browser/API key)
+* Loading skeletons in output and screenshot panels
+* Copy to clipboard + Download markdown
+* Clear output button
+* Dismissible error states
+* Auto-extract example URLs
 
 ---
 
