@@ -60,8 +60,8 @@ export default function WorkspaceCanvas({ screenshot, isExtracting }: WorkspaceC
 
   return (
     <div className="border-brutal bg-white h-full flex flex-col">
-      {/* Header */}
-      <div className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between">
+      {/* Header - stays sticky while scrolling */}
+      <div className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2 md:gap-3">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="md:w-4 md:h-4">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
