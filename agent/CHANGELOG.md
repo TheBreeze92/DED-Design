@@ -66,11 +66,6 @@ Format based on Keep a Changelog.
 * Sticky headers now show keyboard shortcut hint instead of static text
 * Improved accessibility with title attributes on buttons
 
-### Technical
-
-* Full keyboard event handling for extraction workflow
-* Platform-aware keyboard shortcut display
-
 ---
 
 ## Technical Notes (NON-FUNCTIONAL)

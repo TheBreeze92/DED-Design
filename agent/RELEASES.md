@@ -12,6 +12,24 @@ It does NOT include planned features, roadmaps, or development processes.
 
 ## Production Releases
 
+### v0.1.1 - UX Polish Release
+
+**Date**: 2026-05-31
+**Status**: Live in production
+
+#### Summary
+
+UX improvements and keyboard shortcuts for power users.
+
+#### Included Features
+
+* Keyboard shortcuts (Cmd/Ctrl+Enter, Escape)
+* Auto-focus URL input
+* Loading skeleton animations
+* Improved accessibility
+
+---
+
 ### v0.1.0 - Initial Release
 
 **Date**: 2026-05-31
@@ -35,7 +53,7 @@ Initial working version of DED Design, enabling URL-based extraction of design d
 
 ## Current Production State
 
-* Latest Version: v0.1.0
+* Latest Version: v0.1.1
 * Deployment Status: Active
 * System Stability: Stable (early-stage)
 
