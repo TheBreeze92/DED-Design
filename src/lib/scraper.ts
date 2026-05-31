@@ -551,14 +551,34 @@ async function extractDesignSystemLocal(
       tokens,
     };
   } catch (error) {
-    addLog(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    const rawMessage = error instanceof Error ? error.message : 'Unknown error';
+    let userMessage = rawMessage;
+
+    // Categorize common Puppeteer failures into friendly messages
+    if (rawMessage.includes('Could not find Chrome') || rawMessage.includes('Could not find Chromium') || rawMessage.includes('browser was not found')) {
+      userMessage = 'Browser not available — Puppeteer cannot find Chrome/Chromium on this system. Run: npx puppeteer browsers install chrome';
+    } else if (rawMessage.includes('Timeout')) {
+      userMessage = 'The page took too long to load (timeout). The site may be slow or unreachable.';
+    } else if (rawMessage.includes('net::ERR_NAME_NOT_RESOLVED') || rawMessage.includes('getaddrinfo')) {
+      userMessage = 'Could not resolve the domain name. Please check the URL spelling.';
+    } else if (rawMessage.includes('net::ERR_CONNECTION_REFUSED')) {
+      userMessage = 'Connection refused by the server. The site may be down or blocking requests.';
+    } else if (rawMessage.includes('net::ERR_SSL_PROTOCOL_ERROR') || rawMessage.includes('SSL')) {
+      userMessage = 'SSL/TLS error. The site has a certificate issue or uses an unsupported protocol.';
+    } else if (rawMessage.includes('net::ERR_ABORTED') || rawMessage.includes('Navigation failed')) {
+      userMessage = 'Navigation failed. The site may have redirected to an invalid URL or blocked the request.';
+    } else if (rawMessage.includes('Protocol error') || rawMessage.includes('Target closed')) {
+      userMessage = 'Browser crashed or closed unexpectedly during extraction.';
+    }
+
+    addLog(`Error: ${userMessage}`, 'error');
     if (page) await page.close();
     return {
       success: false,
       html: '',
       css: '',
       logs,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: userMessage,
     };
   }
 }
@@ -620,7 +640,18 @@ export async function extractDesignSystem(
   }
 
   // Fallback to local Puppeteer extraction
-  return extractDesignSystemLocal(url, onLog);
+  addLog('Falling back to local browser extraction...', 'info');
+  const localResult = await extractDesignSystemLocal(url, onLog);
+
+  // If the local fallback failed because the browser is missing, return a clearer actionable hint
+  if (!localResult.success && localResult.error?.includes('Browser not available')) {
+    return {
+      ...localResult,
+      error: 'No browser found and no context.dev API key configured. To fix: (1) Set CONTEXT_API_KEY in .env.local, or (2) Install Chrome: npx puppeteer browsers install chrome',
+    };
+  }
+
+  return localResult;
 }
 
 export function generateDesignMarkdown(tokens: DesignTokens, url: string): string {

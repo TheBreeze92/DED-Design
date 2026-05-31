@@ -26,6 +26,8 @@ export default function Home() {
   const [screenshot, setScreenshot] = useState<string | undefined>();
   const [statusMessage, setStatusMessage] = useState('');
   const [showFloatingDownload, setShowFloatingDownload] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
   const headerRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +35,8 @@ export default function Home() {
     if (!markdown) return;
     try {
       await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -53,6 +57,7 @@ export default function Home() {
     setIsExtracting(true);
     setMarkdown('');
     setScreenshot(undefined);
+    setError('');
 
     try {
       const response = await fetch('/api/extract', {
@@ -62,8 +67,8 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || 'Extraction failed');
+        const errorData = await response.json();
+        setError(errorData.error || 'Extraction failed');
         setIsExtracting(false);
         return;
       }
@@ -72,7 +77,7 @@ export default function Home() {
       const decoder = new TextDecoder();
 
       if (!reader) {
-        alert('No response stream available');
+        setError('No response stream available');
         setIsExtracting(false);
         return;
       }
@@ -95,6 +100,9 @@ export default function Home() {
               if (event.type === 'log') {
                 // Update status message with current task
                 setStatusMessage(event.data?.message || 'Processing...');
+              } else if (event.type === 'error') {
+                setError(event.data?.error || 'Extraction failed');
+                setStatusMessage('');
               } else if (event.type === 'complete') {
                 const result: ExtractionResult = event.data;
                 setMarkdown(result.markdown);
@@ -108,7 +116,7 @@ export default function Home() {
         }
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Network error');
+      setError(err instanceof Error ? err.message : 'Network error');
     } finally {
       setIsExtracting(false);
       setStatusMessage('');
@@ -168,18 +176,40 @@ export default function Home() {
                       )}
                     </div>
                     {markdown && (
-                      <button
-                        onClick={handleDownload}
-                        className="font-mono text-xs uppercase tracking-wider px-2 md:px-3 py-1 bg-white text-black hover:bg-gray-200 transition-colors"
-                      >
-                        Download
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleCopy}
+                          className="font-mono text-xs uppercase tracking-wider px-2 md:px-3 py-1 bg-white text-black hover:bg-gray-200 transition-colors"
+                        >
+                          {copied ? 'Copied!' : 'Copy'}
+                        </button>
+                        <button
+                          onClick={handleDownload}
+                          className="font-mono text-xs uppercase tracking-wider px-2 md:px-3 py-1 bg-white text-black hover:bg-gray-200 transition-colors"
+                        >
+                          Download
+                        </button>
+                      </div>
                     )}
                   </div>
 
                   {/* Markdown Content */}
                   <div className="flex-1 overflow-auto relative">
-                    {markdown ? (
+                    {error ? (
+                      <div className="h-full flex items-center justify-center p-4">
+                        <div className="text-center max-w-sm">
+                          <div className="inline-flex items-center justify-center w-10 h-10 mb-3 bg-red-600 text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(10,10,10,1)]">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="15" y1="9" x2="9" y2="15" />
+                              <line x1="9" y1="9" x2="15" y2="15" />
+                            </svg>
+                          </div>
+                          <p className="font-mono text-sm uppercase tracking-wider mb-2 text-red-600">Extraction Failed</p>
+                          <p className="font-mono text-xs text-gray-600">{error}</p>
+                        </div>
+                      </div>
+                    ) : markdown ? (
                       <pre className="code-block m-0 rounded-none border-0 p-2 md:p-4">
                         <code className="font-mono text-xs">{markdown}</code>
                       </pre>
