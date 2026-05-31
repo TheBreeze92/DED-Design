@@ -28,6 +28,12 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
+  const handleClearOutput = () => {
+    setMarkdown('');
+    setScreenshot(undefined);
+    setError('');
+  };
+
   const handleCopy = async () => {
     if (!markdown) return;
     try {
@@ -175,6 +181,12 @@ export default function Home() {
                         >
                           Download
                         </button>
+                        <button
+                          onClick={handleClearOutput}
+                          className="font-mono text-xs uppercase tracking-wider px-2 md:px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors"
+                        >
+                          Clear
+                        </button>
                       </div>
                     )}
                   </div>
@@ -184,6 +196,16 @@ export default function Home() {
                     {error ? (
                       <div className="h-full flex items-center justify-center p-4">
                         <div className="text-center max-w-sm">
+                          <button
+                            onClick={() => setError('')}
+                            className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+                            aria-label="Dismiss error"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
                           <div className="inline-flex items-center justify-center w-10 h-10 mb-3 bg-red-600 text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(10,10,10,1)]">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <circle cx="12" cy="12" r="10" />
@@ -235,8 +257,6 @@ export default function Home() {
                         </div>
                       </div>
                     )}
-
-
                   </div>
                 </div>
               </div>

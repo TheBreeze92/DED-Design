@@ -13,7 +13,10 @@ interface DashboardProps {
 
 export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, onDownload }: DashboardProps) {
   const [url, setUrl] = useState('');
+  const [urlError, setUrlError] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const isValidUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,16 +67,20 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
               <input
                 type="text"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://example.com"
-                className="input-brutal flex-1 text-sm md:text-base"
+                className={`input-brutal flex-1 text-sm md:text-base ${urlError ? '!border-red-600' : ''}`}
                 disabled={isExtracting}
                 autoFocus
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setUrl(value);
+                  setUrlError(value.trim() ? !isValidUrl(value) : false);
+                }}
               />
               <button
                 type="submit"
                 className={`btn-brutal border-l-0 text-xs md:text-sm ${isExtracting ? 'opacity-50 cursor-not-allowed' : 'btn-brutal-primary'}`}
-                disabled={isExtracting || !url.trim()}
+                disabled={isExtracting || !url.trim() || urlError}
               >
                 {isExtracting ? (
                   <span className="flex items-center gap-1 md:gap-2">
@@ -89,8 +96,20 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span className="hidden sm:inline">Enter a live URL to extract its design system</span>
-            <span className="sm:hidden">Extract design system from URL</span>
+            <span className="hidden sm:inline">
+              {urlError ? (
+                <span className="text-red-600 font-mono">URL must start with http:// or https://</span>
+              ) : (
+                'Enter a live URL to extract its design system'
+              )}
+            </span>
+            <span className="sm:hidden">
+              {urlError ? (
+                <span className="text-red-600 font-mono">Invalid URL</span>
+              ) : (
+                'Extract design system from URL'
+              )}
+            </span>
             {url && (
               <button
                 type="button"
@@ -124,7 +143,13 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
             ].map((example) => (
               <button
                 key={example.url}
-                onClick={() => setUrl(example.url)}
+                onClick={() => {
+                  setUrl(example.url);
+                  setUrlError(false);
+                  if (!isExtracting) {
+                    onExtract(example.url);
+                  }
+                }}
                 className="tag-brutal text-gray-600 hover:text-red-600 hover:border-red-600 text-xs"
                 disabled={isExtracting}
               >
