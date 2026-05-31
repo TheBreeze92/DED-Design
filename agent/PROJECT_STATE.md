@@ -1,65 +1,195 @@
 # PROJECT_STATE.md
 
 ## Current Version
-**v0.1.0** - Initial Release
 
-## Project Overview
-DED Design is a web application that extracts design documentation from URLs and converts them to markdown format with screenshot preview capabilities.
+v0.1.0 - Initial Release
 
-## Build Status
-- ✅ TypeScript compiles cleanly
-- ✅ Development server runs on port 3000
-- ✅ All core features implemented
+---
 
-## Feature Status
+## Current Focus (MOST IMPORTANT)
 
-### Implemented Features
-| Feature | Status | Notes |
-|---------|--------|-------|
-| URL input & validation | ✅ Complete | Dashboard component |
-| Content extraction | ✅ Complete | Puppeteer + Cheerio |
-| Markdown generation | ✅ Complete | Streaming response |
-| Screenshot capture | ✅ Complete | WorkspaceCanvas component |
-| Scrollable panels | ✅ Complete | Independent scrolling |
-| Sticky download button | ✅ Complete | Appears when header scrolls off-screen |
-| Mobile responsive layout | ✅ Complete | Stacked panels on mobile |
-| High contrast Extract button | ✅ Complete | Black background |
+The system is currently focused on:
 
-### Pending Features
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Error handling improvements | 🔄 In Progress | Better error messages |
-| Loading states | 🔄 In Progress | Skeleton/spinner UI |
-| Copy to clipboard | 🔄 In Progress | For extracted content |
+* Improving error handling for failed URL extraction
 
-## Dependencies
-```json
-{
-  "next": "16.2.6",
-  "react": "19.2.4",
-  "puppeteer": "^25.1.0",
-  "cheerio": "^1.2.0",
-  "tailwindcss": "^4"
-}
-```
+All AI work should prioritise this area first.
 
-## Environment
-- Node.js (inferred from package.json)
-- macOS (based on system info)
-- Chrome not available in build environment
+Do NOT introduce unrelated features unless explicitly requested.
 
-## Git Status
-- Repository: https://github.com/TheBreeze92/DED-Design
-- Branch: main
-- Last push: Successfully completed
+---
 
-## Configuration
-- No environment variables currently required
-- No external API keys needed
-- Local development: http://localhost:3000
+## Priority Order (STRICT)
 
-## Known Limitations
-1. Chrome not available for automated browser testing
-2. Screenshot preview is a placeholder (inverts colors)
-3. Mobile viewport testing requires manual verification
-4. No persistent storage (content not saved between sessions)
+All development work must follow this order:
+
+1. Error handling improvements
+2. Loading states and UI feedback
+3. Copy to clipboard functionality
+4. UX polish and minor improvements
+5. New feature development
+
+If a task does not fit into this order, it is LOW PRIORITY.
+
+---
+
+## Active Work
+
+### In Progress
+
+* Improve error handling for Puppeteer extraction failures
+
+### Not Started
+
+* Loading states (skeletons / spinners)
+* Copy extracted content to clipboard
+
+---
+
+## Completed Features
+
+* URL input & validation
+* Content extraction (Puppeteer + Cheerio)
+* Markdown generation (streaming)
+* Screenshot capture
+* Scrollable UI panels
+* Sticky download button
+* Mobile responsive layout
+* Extract button UI styling
+
+---
+
+## Definition of Done (MANDATORY)
+
+A task is only considered complete when ALL of the following are true:
+
+* Feature works correctly in browser
+* No TypeScript errors
+* No console errors in development
+* No regression in existing features
+* Manual test completed in localhost
+* Code is committed with clear message
+
+If any of these are missing, the task is NOT complete.
+
+---
+
+## Risk Awareness
+
+### High Risk Areas (Handle Carefully)
+
+* Puppeteer extraction logic
+* API route changes (/api/extract)
+* Markdown generation pipeline
+* Screenshot capture logic
+
+Any changes here require careful review before implementation.
+
+---
+
+### Medium Risk Areas
+
+* UI components
+* State handling
+* Loading / error UI
+
+---
+
+### Low Risk Areas
+
+* Styling changes
+* Text updates
+* Layout adjustments
+
+---
+
+## Known Issues (DO NOT IGNORE)
+
+* Chrome is not available in production build environment
+* Screenshot preview is currently a visual placeholder
+* Some dynamic websites fail extraction
+* No persistent storage (data is not saved)
+
+These issues should be considered during development decisions.
+
+---
+
+## Development Rules for AI Agents
+
+When working in this project:
+
+### 1. Always start by checking Current Focus
+
+Do not begin implementation without understanding current priority.
+
+---
+
+### 2. Do not introduce new features
+
+Unless explicitly requested.
+
+Focus is on stabilisation, not expansion.
+
+---
+
+### 3. Make minimal changes
+
+Prefer the smallest possible change that solves the problem.
+
+Avoid refactoring unless necessary.
+
+---
+
+### 4. Preserve working functionality
+
+Never break existing extraction flow.
+
+---
+
+### 5. Explain before implementation
+
+For any non-trivial change:
+
+* explain the problem
+* propose solution
+* highlight risks
+* then implement
+
+---
+
+## Output Expectations (for AI responses)
+
+When making changes, structure responses as:
+
+### Objective
+
+What is being solved
+
+### Plan
+
+Step-by-step approach
+
+### Changes
+
+Code or implementation
+
+### Risks
+
+What could break
+
+### Validation
+
+How to test
+
+---
+
+## System Intent
+
+This project is in early-stage development.
+
+The goal is:
+
+* stability over features
+* correctness over complexity
+* clarity over optimisation
+
+Shipping a working system is more important than adding new functionality.
