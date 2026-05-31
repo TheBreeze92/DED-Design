@@ -79,7 +79,7 @@ export default function Dashboard({ onExtract, isExtracting, markdown, onCopy, o
               />
               <button
                 type="submit"
-                className={`btn-brutal border-l-0 text-xs md:text-sm ${isExtracting ? 'opacity-50 cursor-not-allowed' : 'btn-brutal-primary'}`}
+                className={`btn-brutal border-l-0 text-xs md:text-sm bg-red-600 text-white border-red-600 hover:bg-black hover:border-black ${isExtracting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={isExtracting || !url.trim() || urlError}
               >
                 {isExtracting ? (
