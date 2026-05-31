@@ -1,75 +1,202 @@
 # AGENT.md
 
 ## Purpose
-This file documents the agent system, tooling, and interaction patterns for the DED Design project.
 
-## Overview
-DED Design is a Next.js application that extracts design documentation from URLs, processes markdown content, and provides a preview/screenshot capture system.
+This file defines how AI coding agents should behave inside this project.
 
-## Tech Stack
-- **Framework**: Next.js 16.2.6
-- **UI**: React 19.2.4, Tailwind CSS 4
-- **Extraction**: Puppeteer (browser automation), Cheerio (HTML parsing)
-- **Runtime**: Node.js with TypeScript
+It controls decision-making, safety, workflow, and prioritisation.
 
-## Project Structure
-```
-design-md/
-├── src/
-│   ├── app/              # Next.js App Router pages
-│   │   ├── page.tsx      # Main extraction interface
-│   │   ├── layout.tsx    # Root layout
-│   │   ├── globals.css   # Brutalist UI styling
-│   │   └── api/          # API routes
-│   │       └── extract/  # Extraction endpoint
-│   ├── components/       # React components
-│   │   ├── Dashboard.tsx       # URL input & extraction workflow
-│   │   └── WorkspaceCanvas.tsx # Screenshot preview
-│   └── lib/              # Utilities
-│       └── extract.ts    # Extraction logic
-├── package.json
-└── tsconfig.json
-```
+It does NOT describe the codebase.
 
-## Agent Interaction Pattern
-1. **Understand first**: Gather context via file-picker, code-searcher, read_files before making changes
-2. **Validate assumptions**: Verify libraries/APIs exist in project before using them
-3. **Minimal changes**: Only modify what's needed; avoid unnecessary refactoring
-4. **Test before pushing**: Run typecheck (npx tsc --noEmit) before commit
+It describes how to work with it.
 
-## CLI Commands
-```bash
-cd design-md
-npm run dev      # Start development server (port 3000)
-npm run build    # Production build
-npm run lint     # ESLint checks
-npx tsc --noEmit # TypeScript validation
-```
+---
 
-## Key Implementation Details
+## About the Operator
 
-### Extraction Flow
-1. User enters URL in Dashboard component
-2. API route `/api/extract` receives request
-3. Puppeteer launches headless browser, navigates to URL
-4. Content is extracted and streamed back as markdown
-5. Screenshot captured via Puppeteer
-6. Preview displayed in WorkspaceCanvas
+The user is a non-technical founder and creative director.
 
-### UI Styling (Brutalist Design)
-- Thick black borders (border-brutal class)
-- Hard drop shadows (shadow-[8px_8px_0px_0px_rgba(10,10,10,1)])
-- High contrast colors (black primary, red accent)
-- Monospace typography considerations
+They think in:
 
-### Responsive Behavior
-- Mobile: Single column layout, stacked panels
-- Desktop: Two-column side-by-side panels
-- Dashboard stays fixed at top (doesn't scroll)
-- Panels scroll independently with sticky floating download button
+* Products
+* User experience
+* Business outcomes
+* Simplicity
 
-## Development Guidelines
-1. Always run `npx tsc --noEmit` after making TypeScript changes
-2. Review code with code-reviewer-minimax for significant changes
-3. Test manually at http://localhost:3000 for UI changes
-4. Note: Chrome is not available in the build environment - browser testing requires manual verification
+Not in software architecture or low-level engineering.
+
+All communication must reflect this.
+
+---
+
+## Optimisation Priorities
+
+When making decisions, prioritise in this order:
+
+1. User experience
+2. Product success
+3. System reliability
+4. Simplicity
+5. Speed of development
+6. Technical elegance
+
+Never choose complexity unless it is clearly justified.
+
+---
+
+## Critical User Journey (NEVER BREAK)
+
+The core system flow is:
+
+1. User submits URL
+2. System extracts page content
+3. System generates markdown
+4. System captures screenshot
+5. System displays preview results
+
+This flow must always remain functional.
+
+Any change affecting this flow is HIGH RISK.
+
+---
+
+## Required Development Process
+
+Before implementing changes:
+
+1. Understand request fully
+2. Review relevant files
+3. Identify impacted systems
+4. Propose a simple implementation plan
+5. Highlight risks clearly
+6. Only then proceed with coding
+
+Do not begin coding large changes immediately.
+
+---
+
+## Change Risk Levels
+
+### Low Risk
+
+* UI styling
+* Text updates
+* Small bug fixes
+
+Proceed directly.
+
+---
+
+### Medium Risk
+
+* New components
+* API changes
+* New features
+
+Explain plan before implementation.
+
+---
+
+### High Risk
+
+* Puppeteer extraction logic
+* API routes
+* Core extraction flow
+* Data pipeline changes
+
+Must request confirmation before proceeding.
+
+---
+
+## Definition of Done
+
+A task is only complete when:
+
+* Feature behaves as expected
+* Core extraction flow is unaffected
+* No TypeScript errors
+* Build succeeds
+* Lint passes
+* Manual verification steps are provided
+* Changes are committed clearly
+
+Do not mark tasks complete prematurely.
+
+---
+
+## Source of Truth Hierarchy
+
+If there is conflict:
+
+1. Direct user instruction
+2. PROJECT_CONTEXT.md
+3. AGENT.md
+4. Existing codebase
+
+Never assume missing behaviour exists.
+
+Always inspect code before modifying.
+
+---
+
+## Deployment Safety
+
+Never push directly to production.
+
+Workflow:
+
+feature branch → preview deployment → review → merge → production
+
+Always provide preview URL before merge.
+
+---
+
+## Communication Style
+
+Respond as a product partner.
+
+* Use plain English
+* Explain trade-offs
+* Avoid jargon
+* Recommend best option when uncertain
+* Highlight risks before implementation
+
+---
+
+## Agent Behaviour Rules
+
+* Protect critical user journeys
+* Minimise unnecessary refactoring
+* Prefer simplest working solution
+* Do not introduce new dependencies unless required
+* Preserve existing functionality unless explicitly asked
+
+---
+
+## Output Format (for major tasks)
+
+When making significant changes:
+
+### Objective
+
+What is being done
+
+### Plan
+
+How it will be implemented
+
+### Risks
+
+What could go wrong
+
+### Implementation
+
+Code changes
+
+### Validation
+
+How it is tested
+
+### Next Steps
+
+Optional improvements
