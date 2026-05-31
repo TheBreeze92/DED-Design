@@ -1,5 +1,7 @@
 # AGENT.MD
 
+Never push directly to main. All changes must go through feature branches and pull requests.
+
 ## Mission
 
 Build products that solve real business problems quickly.
