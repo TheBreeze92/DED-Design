@@ -1,75 +1,68 @@
 # RELEASES.md
 
-## Release History
+## Purpose
+
+This file records **what versions of the system are currently deployed to production**.
+
+It is the source of truth for what is live.
+
+It does NOT include planned features, roadmaps, or development processes.
+
+---
+
+## Production Releases
 
 ### v0.1.0 - Initial Release
-**Date**: 2026-05-31  
-**Status**: ✅ Released  
-**Branch**: main  
-**Commit**: Latest on main after initial development
 
-#### What's Included
-- URL extraction to Markdown
-- Screenshot preview
-- Scrollable panels with sticky download button
-- Mobile responsive layout
-- Brutalist UI design
+**Date**: 2026-05-31
+**Status**: Live in production
 
-#### Deployment
-- **Repository**: https://github.com/TheBreeze92/DED-Design
-- **Local URL**: http://localhost:3000 (development)
-- **Platform**: Vercel (recommended for production)
+#### Summary
 
-#### Getting Started
-```bash
-cd design-md
-npm install
-npm run dev
-```
+Initial working version of DED Design, enabling URL-based extraction of design documentation into markdown with preview capabilities.
+
+#### Included Features
+
+* URL-based content extraction
+* Markdown generation from web pages
+* Screenshot preview system
+* Dual-panel UI (Output + Preview)
+* Responsive layout (mobile + desktop)
+* Download functionality for extracted content
+* Brutalist UI design system
 
 ---
 
-## Future Releases
+## Current Production State
 
-### v0.2.0 - Enhanced UX
-**Planned Features**:
-- Copy to clipboard button
-- Loading skeleton states
-- Improved error messages
-- Better screenshot quality
-
-**Target Date**: TBD
-
-### v1.0.0 - Production Ready
-**Planned Features**:
-- Persistent storage (save extractions)
-- Multiple export formats (PDF, HTML)
-- Authentication for private docs
-- Custom extraction selectors
-
-**Target Date**: TBD
+* Latest Version: v0.1.0
+* Deployment Status: Active
+* System Stability: Stable (early-stage)
 
 ---
 
-## Release Process
+## Release Notes Rules
 
-1. **Development**: Feature work on feature branches
-2. **Code Review**: Review changes before merge
-3. **TypeCheck**: Ensure TypeScript compiles cleanly
-4. **Testing**: Manual testing on local environment
-5. **Merge**: Squash and merge to main
-6. **Tag**: Create version tag (e.g., v0.2.0)
-7. **Deploy**: Push to Vercel or chosen platform
+When adding a new release:
 
-## Versioning Strategy
+* Only include features that are live in production
+* Do NOT include planned or in-development features
+* Do NOT include implementation details
+* Do NOT include development process steps
 
-- **Major.Minor.Patch** format
-- Major: Breaking changes
-- Minor: New features (backwards compatible)
-- Patch: Bug fixes
+---
 
-## Changelog Location
+## Versioning Standard
 
-Changes are documented in:
-- `CHANGELOG.md` - Detailed version history
-- `agent/` directory - Agent and developer documentation
+* Major.Minor.Patch format
+* Only increment version when deployed
+* No version exists until it is live
+
+---
+
+## Relationship to Other Files
+
+* CHANGELOG.md → full history of changes
+* PROJECT_STATE.md → current development work
+* PROJECT_CONTEXT.md → system architecture
+* AGENT.md → AI behaviour rules
