@@ -213,6 +213,34 @@ export default function Home() {
                       <pre className="code-block m-0 rounded-none border-0 p-2 md:p-4">
                         <code className="font-mono text-xs">{markdown}</code>
                       </pre>
+                    ) : isExtracting ? (
+                      /* Loading skeleton for markdown output */
+                      <div className="p-4 md:p-6 space-y-3">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-4 h-4 bg-gray-200 animate-pulse" />
+                          <div className="h-3 w-32 bg-gray-200 animate-pulse" />
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-5/6 bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-4/6 bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-3/4 bg-gray-100 animate-pulse" />
+                        <div className="space-y-2 pt-2">
+                          <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-5/6 bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-4/6 bg-gray-100 animate-pulse" />
+                        </div>
+                        <div className="space-y-2 pt-2">
+                          <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-3/4 bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-2/3 bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-5/6 bg-gray-100 animate-pulse" />
+                        </div>
+                        <div className="flex items-center gap-2 pt-2">
+                          <div className="h-6 w-16 bg-gray-200 animate-pulse" />
+                          <div className="h-6 w-16 bg-gray-200 animate-pulse" />
+                        </div>
+                      </div>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-400 p-4">
                         <div className="text-center">
@@ -245,7 +273,7 @@ export default function Home() {
 
               {/* Right: Screenshot Preview */}
               <div className="flex flex-col min-h-[200px] sm:min-h-[250px] lg:min-h-0">
-                <WorkspaceCanvas screenshot={screenshot} />
+                <WorkspaceCanvas screenshot={screenshot} isExtracting={isExtracting} />
               </div>
             </div>
           </div>
