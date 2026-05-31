@@ -2,9 +2,41 @@
 
 interface WorkspaceCanvasProps {
   screenshot?: string;
+  isExtracting?: boolean;
 }
 
-export default function WorkspaceCanvas({ screenshot }: WorkspaceCanvasProps) {
+export default function WorkspaceCanvas({ screenshot, isExtracting }: WorkspaceCanvasProps) {
+  if (isExtracting && !screenshot) {
+    return (
+      <div className="border-brutal bg-white h-full flex flex-col">
+        {/* Header */}
+        <div className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+            <span className="font-mono text-xs uppercase tracking-widest">
+              Capturing...
+            </span>
+          </div>
+        </div>
+        {/* Skeleton */}
+        <div className="flex-1 overflow-auto bg-gray-50 p-4 md:p-6 flex items-center justify-center">
+          <div className="w-full max-w-md space-y-3">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 bg-gray-200 animate-pulse" />
+              <div className="h-2 w-24 bg-gray-200 animate-pulse" />
+            </div>
+            <div className="h-48 md:h-64 bg-gray-100 animate-pulse border-2 border-gray-200" />
+            <div className="flex gap-2 pt-2">
+              <div className="h-2 w-16 bg-gray-100 animate-pulse" />
+              <div className="h-2 w-12 bg-gray-100 animate-pulse" />
+              <div className="h-2 w-20 bg-gray-100 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!screenshot) {
     return (
       <div className="border-brutal bg-gray-50 h-full flex items-center justify-center p-6 md:p-8">
@@ -28,8 +60,8 @@ export default function WorkspaceCanvas({ screenshot }: WorkspaceCanvasProps) {
 
   return (
     <div className="border-brutal bg-white h-full flex flex-col">
-      {/* Header */}
-      <div className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between">
+      {/* Header - stays sticky while scrolling */}
+      <div className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2 md:gap-3">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="md:w-4 md:h-4">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Dashboard from '@/components/Dashboard';
 import WorkspaceCanvas from '@/components/WorkspaceCanvas';
 
@@ -25,11 +25,8 @@ export default function Home() {
   const [markdown, setMarkdown] = useState('');
   const [screenshot, setScreenshot] = useState<string | undefined>();
   const [statusMessage, setStatusMessage] = useState('');
-  const [showFloatingDownload, setShowFloatingDownload] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
-  const headerRef = useRef<HTMLDivElement>(null);
-  const panelScrollRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = async () => {
     if (!markdown) return;
@@ -134,27 +131,16 @@ export default function Home() {
           </div>
 
           {/* Scrollable container for panels - this scrolls, Dashboard stays fixed */}
-          <div 
-            ref={panelScrollRef}
-            className="flex-1 min-h-0 overflow-auto" 
+          <div
+            className="flex-1 min-h-0 overflow-auto"
             style={{ maxHeight: 'calc(100vh - 180px)' }}
-            onScroll={() => {
-              if (!markdown || !headerRef.current || !panelScrollRef.current) {
-                setShowFloatingDownload(false);
-                return;
-              }
-              const headerRect = headerRef.current.getBoundingClientRect();
-              const containerRect = panelScrollRef.current.getBoundingClientRect();
-              const isOffScreen = headerRect.bottom < containerRect.top || headerRect.top > containerRect.bottom;
-              setShowFloatingDownload(isOffScreen);
-            }}
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
               {/* Left: Markdown Output with Download */}
               <div className="flex flex-col min-h-[200px] sm:min-h-[250px] lg:min-h-0">
                 <div className="border-brutal bg-white flex-1 flex flex-col shadow-[8px_8px_0px_0px_rgba(10,10,10,1)] relative">
-                  {/* Header - scrolls with panel content */}
-                  <div ref={headerRef} className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between">
+                  {/* Header - stays sticky while scrolling */}
+                  <div className="border-brutal-bottom bg-black text-white px-3 md:px-4 py-2 md:py-3 flex items-center justify-between sticky top-0 z-10">
                     <div className="flex items-center gap-2 md:gap-3">
                       <span className={`w-2 h-2 rounded-full ${isExtracting ? 'bg-yellow-500 animate-pulse' : (markdown ? 'bg-green-500' : 'bg-gray-500')}`}
                       />
@@ -213,6 +199,34 @@ export default function Home() {
                       <pre className="code-block m-0 rounded-none border-0 p-2 md:p-4">
                         <code className="font-mono text-xs">{markdown}</code>
                       </pre>
+                    ) : isExtracting ? (
+                      /* Loading skeleton for markdown output */
+                      <div className="p-4 md:p-6 space-y-3">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-4 h-4 bg-gray-200 animate-pulse" />
+                          <div className="h-3 w-32 bg-gray-200 animate-pulse" />
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-5/6 bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-4/6 bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                        <div className="h-2 w-3/4 bg-gray-100 animate-pulse" />
+                        <div className="space-y-2 pt-2">
+                          <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-5/6 bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-4/6 bg-gray-100 animate-pulse" />
+                        </div>
+                        <div className="space-y-2 pt-2">
+                          <div className="h-2 w-full bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-3/4 bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-2/3 bg-gray-100 animate-pulse" />
+                          <div className="h-2 w-5/6 bg-gray-100 animate-pulse" />
+                        </div>
+                        <div className="flex items-center gap-2 pt-2">
+                          <div className="h-6 w-16 bg-gray-200 animate-pulse" />
+                          <div className="h-6 w-16 bg-gray-200 animate-pulse" />
+                        </div>
+                      </div>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-400 p-4">
                         <div className="text-center">
@@ -222,30 +236,14 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Floating Download Button - sticky at top of scrollable content, stays visible while scrolling */}
-                    {markdown && showFloatingDownload && (
-                      <div className="sticky top-0 z-20 flex justify-end px-3 py-2 bg-gray-50 border-b-2 border-gray-200 shadow-sm">
-                        <button
-                          onClick={handleDownload}
-                          className="font-mono text-xs uppercase tracking-wider px-3 md:px-4 py-2 bg-white text-black border-4 border-black shadow-[4px_4px_0px_0px_rgba(10,10,10,1)] hover:-translate-y-0.5 hover:translate-x-0.5 transition-all flex items-center gap-2"
-                          aria-label="Download design.md"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                          </svg>
-                          <span>Download</span>
-                        </button>
-                      </div>
-                    )}
+
                   </div>
                 </div>
               </div>
 
               {/* Right: Screenshot Preview */}
               <div className="flex flex-col min-h-[200px] sm:min-h-[250px] lg:min-h-0">
-                <WorkspaceCanvas screenshot={screenshot} />
+                <WorkspaceCanvas screenshot={screenshot} isExtracting={isExtracting} />
               </div>
             </div>
           </div>
