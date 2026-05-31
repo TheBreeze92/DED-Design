@@ -44,10 +44,32 @@ Format based on Keep a Changelog.
 
 ### Planned
 
-* Improved error handling for extraction failures
-* Loading states for better UX feedback
-* Improved screenshot rendering reliability
+* Extraction history (local storage)
+* Persistent session data
+* Section-specific copy functionality
 * Additional export formats (PDF, HTML)
+* Improved screenshot rendering reliability
+
+---
+
+## [0.1.1] - 2026-05-31
+
+### Added
+
+* Keyboard shortcuts: Cmd/Ctrl+Enter to extract, Escape to clear input
+* Auto-focus on URL input field
+* Visual keyboard hint when URL is valid
+* Loading skeleton animations
+
+### Changed
+
+* Sticky headers now show keyboard shortcut hint instead of static text
+* Improved accessibility with title attributes on buttons
+
+### Technical
+
+* Full keyboard event handling for extraction workflow
+* Platform-aware keyboard shortcut display
 
 ---
 

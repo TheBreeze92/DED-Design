@@ -2,7 +2,7 @@
 
 ## Current Version
 
-v0.1.0 - Initial Release
+v0.1.1 - UX Polish Release
 
 ---
 
@@ -25,7 +25,8 @@ All development work must follow this order:
 1. ~~Error handling improvements~~ ✅ Done
 2. ~~Loading states and UI feedback~~ ✅ Done
 3. ~~Copy to clipboard functionality~~ ✅ Done
-4. UX polish and minor improvements — In Progress
+4. ~~UX polish and minor improvements~~ ✅ Done
+5. Keyboard shortcuts — ✅ Done
 5. New feature development
 
 If a task does not fit into this order, it is LOW PRIORITY.
@@ -36,11 +37,11 @@ If a task does not fit into this order, it is LOW PRIORITY.
 
 ### In Progress
 
-* Broader testing and bug fixes for v1.0.0
+* v0.2.0 planning (extraction history, persistent storage)
 
 ### Not Started
 
-* v0.2.0 feature development (extraction history, persistent storage, section-specific copy, keyboard shortcuts)
+* v0.2.0 feature development
 
 ---
 
@@ -60,6 +61,9 @@ If a task does not fit into this order, it is LOW PRIORITY.
 * Clear output button
 * Dismissible error states
 * Auto-extract example URLs
+* Keyboard shortcuts (Cmd/Ctrl+Enter, Escape)
+* Auto-focus URL input on page load
+* Visual keyboard hints
 
 ---
 
