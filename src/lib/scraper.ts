@@ -1,4 +1,4 @@
-import type { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer-core';
 
 export interface ExtractionLog {
   timestamp: string;
@@ -407,7 +407,7 @@ async function extractDesignSystemLocal(
   onLog?: (log: ExtractionLog) => void
 ): Promise<ExtractionResult & { tokens?: DesignTokens }> {
   // Import puppeteer dynamically only when needed (fallback)
-  const { default: puppeteer } = await import('puppeteer');
+  const { default: puppeteer } = await import('puppeteer-core');
   let browser: Browser | null = null;
   const logs: ExtractionLog[] = [];
 
@@ -419,9 +419,15 @@ async function extractDesignSystemLocal(
 
   try {
     addLog('Initializing Chromium browser (fallback)...', 'info');
+    // On Vercel use the bundled serverless Chromium; locally use installed Chrome.
+    const chromium = process.env.VERCEL ? (await import('@sparticuz/chromium')).default : null;
     browser = await puppeteer.launch({
       headless: true,
+      executablePath: chromium
+        ? await chromium.executablePath()
+        : process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       args: [
+        ...(chromium?.args ?? []),
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -575,7 +581,7 @@ async function extractDesignSystemLocal(
 
     // Categorize common Puppeteer failures into friendly messages
     if (rawMessage.includes('Could not find Chrome') || rawMessage.includes('Could not find Chromium') || rawMessage.includes('browser was not found')) {
-      userMessage = 'Browser not available — Puppeteer cannot find Chrome/Chromium on this system. Run: npx puppeteer browsers install chrome';
+      userMessage = 'Browser not available — Puppeteer cannot find Chrome/Chromium on this system. Set PUPPETEER_EXECUTABLE_PATH to a Chrome install';
     } else if (rawMessage.includes('Timeout')) {
       userMessage = 'The page took too long to load (timeout). The site may be slow or unreachable.';
     } else if (rawMessage.includes('net::ERR_NAME_NOT_RESOLVED') || rawMessage.includes('getaddrinfo')) {
@@ -614,7 +620,11 @@ export async function extractDesignSystem(
     onLog?.(log);
   };
 
-  // Try context.dev API first if API key is valid (non-empty)
+  // Measure the page ourselves first: it is the only path where every value is read from the page.
+  const measured = await extractDesignSystemLocal(url, onLog);
+  if (measured.success || !(apiKey && apiKey.trim().length > 0)) return measured;
+  addLog('Browser measurement failed, trying context.dev instead...', 'warning');
+
   if (apiKey && apiKey.trim().length > 0) {
     try {
       // Fetch screenshot from context.dev
@@ -658,19 +668,7 @@ export async function extractDesignSystem(
     }
   }
 
-  // Fallback to local Puppeteer extraction
-  addLog('Falling back to local browser extraction...', 'info');
-  const localResult = await extractDesignSystemLocal(url, onLog);
-
-  // If the local fallback failed because the browser is missing, return a clearer actionable hint
-  if (!localResult.success && localResult.error?.includes('Browser not available')) {
-    return {
-      ...localResult,
-      error: 'No browser found and no context.dev API key configured. To fix: (1) Set CONTEXT_API_KEY in .env.local, or (2) Install Chrome: npx puppeteer browsers install chrome',
-    };
-  }
-
-  return localResult;
+  return measured;
 }
 
 // ─── Measured-only markdown generation ───────────────────────────────
