@@ -113,7 +113,7 @@ export default function About() {
             {/* Explanation */}
             <div className="border-brutal bg-white p-4 md:p-6 shadow-[8px_8px_0px_0px_rgba(10,10,10,1)]">
               <p className="font-mono text-xs md:text-sm text-gray-700 leading-relaxed">
-                Your project's visual identity — colors, fonts, spacing, component styles — usually lives in a Figma file, a brand PDF, or a designer's head. An AI coding agent can't read any of those.
+                Your project&apos;s visual identity — colors, fonts, spacing, component styles — usually lives in a Figma file, a brand PDF, or a designer&apos;s head. An AI coding agent can&apos;t read any of those.
               </p>
               <p className="font-mono text-xs md:text-sm text-gray-700 leading-relaxed mt-3">
                 A <strong className="text-black">design.md</strong> is a plain-text file that describes how your UI should look, so both humans and agents work from the same rules. Same idea as a README, but for design.

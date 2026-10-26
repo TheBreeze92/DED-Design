@@ -13,8 +13,8 @@ Users input a URL, and the system automatically extracts, processes, and display
 The system is designed to:
 
 * Accept a URL from the user
-* Extract page content using a headless browser
-* Convert content into structured markdown documentation
+* Extract the page's measured design values (colours, type, spacing, radii, buttons), via context.dev when a key is set, else a local headless browser
+* Convert them into a design.md that contains measured values only
 * Capture a visual screenshot of the page
 * Display results in a preview workspace UI
 
@@ -28,8 +28,8 @@ The system is designed to:
 * Runtime: Node.js with TypeScript
 * Extraction Engine:
 
-  * Puppeteer (browser automation)
-  * Cheerio (HTML parsing)
+  * context.dev Styleguide and Screenshot APIs (primary, needs `CONTEXT_API_KEY`)
+  * Puppeteer (local fallback, reads computed styles in a real browser)
 
 ---
 
@@ -39,11 +39,11 @@ The system is designed to:
 
 1. User submits a URL via Dashboard UI
 2. Request is sent to `/api/extract`
-3. Puppeteer launches a headless browser
-4. Target page is loaded
-5. Content is extracted from DOM
-6. Content is converted into markdown
-7. Screenshot is captured
+3. `extractDesignSystem` calls context.dev (key from `CONTEXT_API_KEY` or the `x-context-api-key` header)
+4. If there is no key, or context.dev returns nothing, it falls back to local Puppeteer
+5. Tokens are collected: measured colour roles, type scale, spacing, radii, buttons
+6. `generateDesignMarkdown` writes only measured values and lists what it could not measure
+7. Screenshot comes from context.dev, or from Puppeteer on the fallback path
 8. Response is returned to frontend
 9. WorkspaceCanvas renders markdown + preview
 
@@ -64,7 +64,7 @@ design-md/
 │   │   ├── Dashboard.tsx     # URL input + workflow UI
 │   │   └── WorkspaceCanvas.tsx # Preview + results display
 │   └── lib/
-│       └── extract.ts        # Extraction logic (Puppeteer + Cheerio)
+│       └── scraper.ts        # Extraction (context.dev, Puppeteer fallback) and markdown generation
 ├── package.json
 └── tsconfig.json
 ```
@@ -89,17 +89,17 @@ design-md/
 
 ## Extraction System Details
 
-### Puppeteer Behaviour
+### Puppeteer Fallback Behaviour
 
-* Launches headless Chrome instance
-* Navigates to user-provided URL
-* Waits for page load completion
-* Extracts structured DOM content
+* Used when no context.dev key is set or the API returns nothing
+* Launches headless Chrome, navigates to the URL, waits for network idle
+* Reads computed styles for body background and text, button and link accent, h1 to h4 and p
 
 ### Markdown Generation
 
-* Converts extracted HTML into structured markdown
-* Preserves headings, paragraphs, and key sections
+* Emits only values that were measured; no template defaults
+* A Not measured list names anything that was omitted
+* A text colour that fails 4.5:1 contrast on its surface is omitted, not emitted
 * Outputs streaming response to frontend
 
 ### Screenshot Capture
@@ -125,10 +125,10 @@ npx tsc --noEmit # TypeScript validation
 
 ## Environment Constraints
 
-* Chrome is NOT available in production build environments
-* Puppeteer requires manual verification in preview/local environments
+* Chrome is NOT available in production build environments, so production relies on context.dev
+* Puppeteer fallback needs a local Chrome (`npx puppeteer browsers install chrome`)
 * Vercel is used for preview deployments and production hosting
-* No external APIs or keys are currently required
+* `CONTEXT_API_KEY` (env var, never committed) enables the context.dev path
 
 ---
 
