@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio';
+import type { Browser } from 'puppeteer';
 
 export interface ExtractionLog {
   timestamp: string;
@@ -35,8 +35,8 @@ export interface DesignTokens {
       name: string;
       element: string;
       fontSize: string;
-      lineHeight: string;
-      fontWeight: number;
+      lineHeight?: string;
+      fontWeight?: number;
     }>;
   };
   spacing: Array<{ name: string; value: string; px: number }>;
@@ -63,7 +63,7 @@ function createLog(message: string, type: ExtractionLog['type']): ExtractionLog 
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-fd]{2})([a-fd]{2})([a-fd]{2})$/i.exec(hex);
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
     : null;
@@ -122,14 +122,8 @@ function extractColors(css: string): Array<{ hex: string; rgb: { r: number; g: n
     if (!rgb) continue;
 
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    let usage = 'unknown';
-    if (hsl.s < 10 && hsl.l > 85) usage = 'background';
-    else if (hsl.s < 10 && hsl.l < 20) usage = 'text';
-    else if (hsl.s > 60 && hsl.l > 40) usage = 'accent';
-    else if (hsl.s > 30 && hsl.l > 50) usage = 'primary';
-    else if (hsl.s > 20 && hsl.l > 30) usage = 'secondary';
-
-    tokens.push({ hex, rgb, hsl, usage });
+    // A colour appearing in the CSS says nothing about its role; roles come from computed styles.
+    tokens.push({ hex, rgb, hsl, usage: 'unknown' });
   }
 
   return tokens;
@@ -138,62 +132,32 @@ function extractColors(css: string): Array<{ hex: string; rgb: { r: number; g: n
 function extractFonts(css: string): Array<{ family: string; weights: number[]; styles: string[] }> {
   const fonts: Array<{ family: string; weights: number[]; styles: string[] }> = [];
   const seen = new Set<string>();
-  const fontFamilyRegex = /font-family:\b[^;]+/gi;
+  const fontFamilyRegex = /font-family:\s*[^;]+/gi;
   let match;
 
   while ((match = fontFamilyRegex.exec(css)) !== null) {
-    const family = match[0].replace(/font-family:\b/, '').replace(/['"]/g, '').trim();
+    const family = match[0].replace(/font-family:\s*/, '').replace(/['"]/g, '').trim();
     const primaryFamily = family.split(',')[0].trim().replace(/['"]/g, '');
     
     if (primaryFamily && !seen.has(primaryFamily.toLowerCase())) {
       seen.add(primaryFamily.toLowerCase());
-      fonts.push({ family: primaryFamily, weights: [400, 700], styles: ['normal', 'italic'] });
+      fonts.push({ family: primaryFamily, weights: [], styles: [] });
     }
   }
 
   return fonts;
 }
 
-function extractTypographyScale($: cheerio.CheerioAPI): Array<{ name: string; element: string; fontSize: string; lineHeight: string; fontWeight: number }> {
-  const scale: Array<{ name: string; element: string; fontSize: string; lineHeight: string; fontWeight: number }> = [];
-
-  $('h1, h2, h3, h4, h5, h6').each((_: number, elem) => {
-    const tag = (elem as any).tagName?.toLowerCase() || 'span';
-    const style = $(elem).attr('style') || '';
-    const fsMatch = style.match(/font-size:\b([^;]+)/);
-    const lhMatch = style.match(/line-height:\b([^;]+)/);
-    const fwMatch = style.match(/font-weight:\b([^;]+)/);
-
-    const fontSize = fsMatch ? fsMatch[1].trim() : $(elem).css('font-size') || '16px';
-    const lineHeight = lhMatch ? lhMatch[1].trim() : $(elem).css('line-height') || '1.2';
-    const fontWeight = fwMatch ? parseInt(fwMatch[1]) || 400 : parseInt($(elem).css('font-weight') || '400') || 400;
-
-    if (!scale.find(s => s.element === tag)) {
-      scale.push({ name: `Heading ${tag.toUpperCase()}`, element: tag, fontSize, lineHeight, fontWeight });
-    }
-  });
-
-  scale.push({
-    name: 'Body',
-    element: 'p, body',
-    fontSize: $('body').css('font-size') || '16px',
-    lineHeight: $('body').css('line-height') || '1.5',
-    fontWeight: 400,
-  });
-
-  return scale;
-}
-
 function extractSpacing(css: string): Array<{ name: string; value: string; px: number }> {
-  const spacingRegex = /(?:padding|margin|gap|top|right|bottom|left)\b[^;]*?([0-9.]+)(px|rem|em|vh|vw|%)/gi;
+  const spacingRegex = /(?:padding|margin|gap)\b[^;]*?([0-9.]+)(px|rem|em)/gi;
   const matches: Array<{ name: string; value: string; px: number }> = [];
   const seen = new Set<string>();
 
-  css.replace(spacingRegex, (_, __, unit) => {
-    const fullMatch = _ + unit;
+  css.replace(spacingRegex, (_, rawNum, unit) => {
+    const num = parseFloat(rawNum);
+    const fullMatch = `${num}${unit}`;
     if (!seen.has(fullMatch)) {
       seen.add(fullMatch);
-      const num = parseFloat(__);
       let px = num;
       if (unit === 'rem' || unit === 'em') px = num * 16;
       else if (unit === 'vh') px = num * 9.6;
@@ -207,13 +171,13 @@ function extractSpacing(css: string): Array<{ name: string; value: string; px: n
 }
 
 function extractBorders(css: string): Array<{ radius: string; px: number; usage: string }> {
-  const radiusRegex = /border-radius:\b[^;]*?([0-9.]+)(px|rem|em|%)/gi;
+  const radiusRegex = /border-radius:\s*[^;]*?([0-9.]+)(px|rem|em|%)/gi;
   const borders: Array<{ radius: string; px: number; usage: string }> = [];
   const seen = new Set<string>();
 
   let match;
   while ((match = radiusRegex.exec(css)) !== null) {
-    const full = match[0].replace(/border-radius:\b[^;]*?/i, '').trim();
+    const full = match[0].replace(/border-radius:\s*/i, '').trim();
     if (!seen.has(full)) {
       seen.add(full);
       const num = parseFloat(match[1]);
@@ -358,22 +322,22 @@ async function fetchContextStyleGuide(
       };
       
       for (const [key, heading] of Object.entries(sg.typography.headings)) {
-        const h = heading as any;
+        const h = heading as { fontSize?: string; lineHeight?: string; fontWeight?: number; fontFamily?: string };
         const name = headingMap[key] || `Heading ${key.toUpperCase()}`;
         
         tokens.typography.scale.push({
           name,
           element: key,
-          fontSize: h.fontSize || '16px',
-          lineHeight: h.lineHeight || '1.2',
-          fontWeight: h.fontWeight || 400,
+          fontSize: h.fontSize || '',
+          lineHeight: h.lineHeight || undefined,
+          fontWeight: h.fontWeight || undefined,
         });
         
         // Extract font family
         if (h.fontFamily && !tokens.typography.fonts.find(f => f.family === h.fontFamily)) {
           tokens.typography.fonts.push({
             family: h.fontFamily,
-            weights: [h.fontWeight || 400],
+            weights: h.fontWeight ? [h.fontWeight] : [],
             styles: ['normal'],
           });
         }
@@ -384,12 +348,12 @@ async function fetchContextStyleGuide(
     // Parse spacing: { xs, sm, md, lg, xl }
     if (sg.elementSpacing) {
       const spacingOrder = ['xs', 'sm', 'md', 'lg', 'xl'];
-      spacingOrder.forEach((key, idx) => {
+      spacingOrder.forEach(key => {
         if (sg.elementSpacing[key]) {
           tokens.spacing.push({
             name: key,
             value: sg.elementSpacing[key],
-            px: parseFloat(sg.elementSpacing[key]) || 16,
+            px: parseFloat(sg.elementSpacing[key]) || 0,
           });
         }
       });
@@ -419,9 +383,9 @@ async function fetchContextStyleGuide(
             background: btn.backgroundColor || '',
             color: btn.color || '',
             border: btn.borderColor || '',
-            borderRadius: btn.borderRadius || '0px',
+            borderRadius: btn.borderRadius || '',
             padding: btn.padding || '',
-            fontSize: btn.fontSize || '14px',
+            fontSize: btn.fontSize || '',
           });
         }
       }
@@ -444,7 +408,7 @@ async function extractDesignSystemLocal(
 ): Promise<ExtractionResult & { tokens?: DesignTokens }> {
   // Import puppeteer dynamically only when needed (fallback)
   const { default: puppeteer } = await import('puppeteer');
-  let page: any = null;
+  let browser: Browser | null = null;
   const logs: ExtractionLog[] = [];
 
   const addLog = (message: string, type: ExtractionLog['type']) => {
@@ -455,7 +419,7 @@ async function extractDesignSystemLocal(
 
   try {
     addLog('Initializing Chromium browser (fallback)...', 'info');
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -466,7 +430,7 @@ async function extractDesignSystemLocal(
         '--disable-web-security',
       ],
     });
-    page = await browser.newPage();
+    const page = await browser.newPage();
 
     addLog(`Navigating to ${url}...`, 'info');
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -490,7 +454,7 @@ async function extractDesignSystemLocal(
       try {
         for (const sheet of sheets) {
           try {
-            const rules = sheet.cssRules || (sheet as any).rules;
+            const rules = sheet.cssRules;
             if (rules) {
               for (const rule of Array.from(rules)) {
                 if ((rule as CSSStyleRule).cssText) {
@@ -498,9 +462,9 @@ async function extractDesignSystemLocal(
                 }
               }
             }
-          } catch (e) { /* CORS restrictions */ }
+          } catch { /* CORS restrictions */ }
         }
-      } catch (e) { /* Ignore */ }
+      } catch { /* Ignore */ }
       return cssStrings.join('\n');
     });
 
@@ -510,14 +474,69 @@ async function extractDesignSystemLocal(
 
     const fullCSS = allCSS + '\n' + styleTags.join('\n') + '\n' + inlineStyles.join('\n');
 
+    addLog('Measuring computed styles...', 'info');
+    const measured = await page.evaluate(() => {
+      // Chrome may report lab()/oklch()/color(); a 1px canvas read gives plain sRGB.
+      const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+      const toRgb = (c: string): string | null => {
+        if (!ctx) return null;
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = '#000';
+        ctx.fillStyle = c;
+        ctx.fillRect(0, 0, 1, 1);
+        const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+        return a === 0 ? null : `rgb(${r}, ${g}, ${b})`;
+      };
+      const bgOf = (start: Element | null) => {
+        for (let el = start; el; el = el.parentElement) {
+          const c = toRgb(getComputedStyle(el).backgroundColor);
+          if (c) return c;
+        }
+        return 'rgb(255, 255, 255)'; // browser canvas default
+      };
+      const first = (sel: string) => document.querySelector(sel);
+      const scale = ['h1', 'h2', 'h3', 'h4', 'p'].flatMap(tag => {
+        const el = first(tag);
+        if (!el) return [];
+        const cs = getComputedStyle(el);
+        return [{ name: tag === 'p' ? 'Body' : `Heading ${tag.toUpperCase()}`, element: tag, fontSize: cs.fontSize, lineHeight: cs.lineHeight, fontWeight: parseInt(cs.fontWeight) || undefined, family: cs.fontFamily }];
+      });
+      // Accent: the most common saturated button background, else the most common saturated link colour.
+      const sat = (c: string) => {
+        const m = c.match(/[\d.]+/g)?.map(Number);
+        if (!m || m.length < 3 || (m.length > 3 && m[3] === 0)) return false;
+        return Math.max(m[0], m[1], m[2]) - Math.min(m[0], m[1], m[2]) > 40;
+      };
+      const tally = (pairs: string[]) => {
+        const counts: Record<string, number> = {};
+        pairs.filter(sat).forEach(c => { counts[c] = (counts[c] || 0) + 1; });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      };
+      const buttons = Array.from(document.querySelectorAll('button, a[class*="btn" i], a[class*="button" i], [role="button"]'));
+      const links = Array.from(document.querySelectorAll('a'));
+      return {
+        background: bgOf(document.body),
+        text: toRgb(getComputedStyle(document.body).color),
+        accent: tally(buttons.map(e => toRgb(getComputedStyle(e).backgroundColor) ?? '')) ?? tally(links.map(e => toRgb(getComputedStyle(e).color) ?? '')),
+        scale: scale.map(x => ({ name: x.name, element: x.element, fontSize: x.fontSize, lineHeight: x.lineHeight, fontWeight: x.fontWeight })),
+        fonts: scale.length > 0 ? [{ family: scale[0].family.split(',')[0].replace(/['"]/g, '').trim(), weights: [] as number[], styles: [] as string[] }] : [],
+      };
+    });
+
     addLog('Parsing color palette...', 'info');
-    const $ = cheerio.load(html);
     const colors = extractColors(fullCSS);
+    const roleColors: DesignTokens['colors']['palette'] = [];
+    for (const [usage, value] of [['background', measured.background], ['text', measured.text], ['accent', measured.accent]] as const) {
+      const hex = parseCssColor(value ?? undefined);
+      const rgb = hex && hexToRgb(hex);
+      if (hex && rgb) roleColors.push({ hex, rgb, hsl: rgbToHsl(rgb.r, rgb.g, rgb.b), usage });
+    }
+    colors.unshift(...roleColors);
     addLog(`Found ${colors.length} unique colors`, 'success');
 
     addLog('Extracting typography...', 'info');
-    const fonts = extractFonts(fullCSS);
-    const scale = extractTypographyScale($);
+    const fonts = measured.fonts.length > 0 ? measured.fonts : extractFonts(fullCSS);
+    const scale = measured.scale;
     addLog(`Detected ${fonts.length} fonts and ${scale.length} type scale entries`, 'success');
 
     addLog('Analyzing spacing patterns...', 'info');
@@ -572,7 +591,7 @@ async function extractDesignSystemLocal(
     }
 
     addLog(`Error: ${userMessage}`, 'error');
-    if (page) await page.close();
+    if (browser) await browser.close().catch(() => {});
     return {
       success: false,
       html: '',
@@ -654,337 +673,207 @@ export async function extractDesignSystem(
   return localResult;
 }
 
+// ─── Measured-only markdown generation ───────────────────────────────
+// Every value written below was read from the page. Anything we could not
+// read is left out and listed under "Not measured", never filled with a guess.
+
+const MIN_CONTRAST = 4.5;
+
+function parseCssColor(value: string | undefined): string | null {
+  if (!value) return null;
+  const v = value.trim().toLowerCase();
+  const hex = /^#([0-9a-f]{3,8})$/.exec(v);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3 || h.length === 4) h = h.split('').map(c => c + c).join('');
+    if (h.length === 8) {
+      if (parseInt(h.slice(6), 16) === 0) return null;
+      h = h.slice(0, 6);
+    }
+    return h.length === 6 ? '#' + h : null;
+  }
+  const fn = /^rgba?\(([^)]+)\)$/.exec(v);
+  if (fn) {
+    const parts = fn[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat);
+    if (parts.length < 3 || parts.slice(0, 3).some(Number.isNaN)) return null;
+    if (parts.length > 3 && parts[3] === 0) return null;
+    return '#' + parts.slice(0, 3).map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+  }
+  return null;
+}
+
+function luminance(hex: string): number {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0;
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(c => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+function evenSample<T>(items: T[], max: number): T[] {
+  if (items.length <= max) return items;
+  return Array.from({ length: max }, (_, i) => items[Math.round((i * (items.length - 1)) / (max - 1))]);
+}
+
 export function generateDesignMarkdown(tokens: DesignTokens, url: string): string {
-  // Extract name from URL hostname
   const urlObj = new URL(url);
   const siteName = urlObj.hostname.replace(/^www\./, '').split('.')[0];
   const formattedName = siteName.charAt(0).toUpperCase() + siteName.slice(1).replace(/-/g, ' ');
-  
-  // Build color map from palette
-  const colorMap: Record<string, string> = {};
-  
-  const usageToColorKey: Record<string, string> = {
-    primary: 'primary',
-    secondary: 'secondary',
-    accent: 'tertiary',
-    text: 'on-surface',
-    background: 'surface',
-    border: 'border',
-  };
+  const notMeasured: string[] = [];
 
-  tokens.colors.palette.forEach(c => {
-    const key = usageToColorKey[c.usage] || c.usage;
-    if (!colorMap[key]) {
-      colorMap[key] = c.hex;
+  // Colors: only roles the extractor actually measured.
+  const roleOf = (usage: string) => tokens.colors.palette.find(c => c.usage === usage)?.hex;
+  const colors: Record<string, string> = {};
+  const accent = roleOf('accent');
+  const surface = roleOf('background');
+  let onSurface = roleOf('text');
+  if (accent) colors['primary'] = accent;
+  if (surface) colors['surface'] = surface;
+  if (onSurface && surface) {
+    const ratio = contrastRatio(onSurface, surface);
+    if (ratio < MIN_CONTRAST) {
+      notMeasured.push(`on-surface: measured text ${onSurface} on surface ${surface} is only ${ratio.toFixed(2)}:1, below ${MIN_CONTRAST}:1, so it is left out`);
+      onSurface = undefined;
     }
-  });
-
-  // Build typography entries with proper naming from template
-  const fontFamilies = tokens.typography.fonts.map(f => f.family);
-  const primaryFont = fontFamilies[0] || 'Inter';
-  const fontFallbacks = [primaryFont, 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'];
-  
-  const typographyEntries: Record<string, any> = {};
-  const typeNameMap: Record<string, string> = {
-    'heading h1': 'headline-display',
-    'heading h2': 'headline-lg',
-    'heading h3': 'headline-md',
-    'heading h4': 'headline-sm',
-    'heading h5': 'headline-sm',
-    'heading h6': 'headline-sm',
-    'body': 'body-lg',
-  };
-
-  tokens.typography.scale.forEach((item, idx) => {
-    const mappedName = typeNameMap[item.name.toLowerCase()] || `body-${idx === 0 ? 'lg' : 'md'}`;
-    if (!typographyEntries[mappedName]) {
-      typographyEntries[mappedName] = {
-        fontFamily: primaryFont,
-        fontSize: item.fontSize,
-        fontWeight: item.fontWeight,
-        lineHeight: item.lineHeight,
-        letterSpacing: item.fontSize ? `${(parseFloat(item.fontSize) * -0.02).toFixed(3)}px` : '0px',
-        fontFallbacks,
-      };
-    }
-  });
-
-  // Ensure we have the standard typography entries
-  const requiredTypes = ['headline-display', 'headline-lg', 'headline-md', 'headline-sm', 'body-lg', 'body-md', 'body-sm', 'label-lg', 'label-md', 'label-sm', 'caption'];
-  requiredTypes.forEach((type, idx) => {
-    if (!typographyEntries[type]) {
-      const defaults: Record<string, any> = {
-        'headline-display': { fontSize: '56px', fontWeight: 510, lineHeight: '61.6px', letterSpacing: '-1.232px' },
-        'headline-lg': { fontSize: '40px', fontWeight: 510, lineHeight: '44px', letterSpacing: '-0.88px' },
-        'headline-md': { fontSize: '20px', fontWeight: 510, lineHeight: '26.6px', letterSpacing: '-0.24px' },
-        'headline-sm': { fontSize: '16px', fontWeight: 510, lineHeight: '24px', letterSpacing: '0px' },
-        'body-lg': { fontSize: '16px', fontWeight: 400, lineHeight: '24px', letterSpacing: '-0.16px' },
-        'body-md': { fontSize: '15px', fontWeight: 400, lineHeight: '24px', letterSpacing: '-0.165px' },
-        'body-sm': { fontSize: '14px', fontWeight: 400, lineHeight: '20px', letterSpacing: '-0.14px' },
-        'label-lg': { fontSize: '16px', fontWeight: 510, lineHeight: '24px', letterSpacing: '0px' },
-        'label-md': { fontSize: '15px', fontWeight: 510, lineHeight: '20px', letterSpacing: '0px' },
-        'label-sm': { fontSize: '12px', fontWeight: 510, lineHeight: '16px', letterSpacing: '0.02em' },
-        'caption': { fontSize: '12px', fontWeight: 400, lineHeight: '16px', letterSpacing: '0px' },
-      };
-      typographyEntries[type] = {
-        fontFamily: primaryFont,
-        fontFallbacks,
-        ...defaults[type],
-      };
-    }
-  });
-
-  // Build spacing entries with template defaults
-  const spacingDefaults: Record<string, string> = {
-    xs: '8px',
-    sm: '16px',
-    md: '28px',
-    lg: '60px',
-    xl: '128px',
-  };
-  const spacingEntries: Record<string, string> = { ...spacingDefaults };
-  tokens.spacing.slice(0, 5).forEach((s, i) => {
-    const names = ['xs', 'sm', 'md', 'lg', 'xl'];
-    if (names[i]) {
-      spacingEntries[names[i]] = s.value;
-    }
-  });
-
-  // Build rounded entries with template defaults
-  const roundedDefaults: Record<string, string> = {
-    none: '0px',
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px',
-    full: '9999px',
-  };
-  const roundedEntries: Record<string, string> = { ...roundedDefaults };
-  tokens.borders.slice(0, 5).forEach((b, i) => {
-    const names = ['none', 'sm', 'md', 'lg', 'xl'];
-    if (names[i]) {
-      roundedEntries[names[i]] = b.radius;
-    }
-  });
-
-  // Build component entries using template variable reference format
-  const componentEntries: Record<string, any> = {};
-  
-  // Button primary - use variable references as per template
-  componentEntries['button-primary'] = {
-    backgroundColor: '"{colors.secondary}"',
-    textColor: '"{colors.neutral}"',
-    typography: '"{typography.label-lg}"',
-    rounded: '"{rounded.full}"',
-    padding: '"14px 20px"',
-    height: '"44px"',
-  };
-
-  // Button secondary
-  componentEntries['button-secondary'] = {
-    backgroundColor: '"transparent"',
-    textColor: '"{colors.on-surface}"',
-    typography: '"{typography.label-lg}"',
-    rounded: '"{rounded.full}"',
-    padding: '"14px 20px"',
-    height: '"44px"',
-  };
-
-  // Button link
-  componentEntries['button-link'] = {
-    backgroundColor: '"transparent"',
-    textColor: '"{colors.on-surface}"',
-    typography: '"{typography.body-lg}"',
-    rounded: '"{rounded.none}"',
-    padding: '"0px"',
-  };
-
-  // Card component
-  componentEntries['card'] = {
-    backgroundColor: '"{colors.surface}"',
-    textColor: '"{colors.on-surface}"',
-    rounded: '"{rounded.md}"',
-    padding: '"0px 24px 28px"',
-  };
-
-  // Input component
-  componentEntries['input'] = {
-    backgroundColor: '"{colors.surface}"',
-    textColor: '"{colors.on-surface}"',
-    typography: '"{typography.body-md}"',
-    rounded: '"{rounded.sm}"',
-    padding: '"12px 14px"',
-  };
-
-  // Chip component
-  componentEntries['chip'] = {
-    backgroundColor: '"#171819"',
-    textColor: '"{colors.on-surface}"',
-    typography: '"{typography.label-sm}"',
-    rounded: '"{rounded.full}"',
-    padding: '"6px 10px"',
-  };
-
-  // Generate YAML frontmatter
-  const frontmatter: string[] = [];
-  frontmatter.push('---');
-  frontmatter.push('version: alpha');
-  frontmatter.push(`name: ${formattedName}`);
-  frontmatter.push(`description: A design system extracted from ${url} — capturing colors, typography, spacing, and components.`);
-  
-  // Colors - use extracted or template defaults
-  const colorDefaults: Record<string, string> = {
-    'primary': '#7170ff',
-    'secondary': '#e5e5e6',
-    'tertiary': '#8d9199',
-    'neutral': '#08090a',
-    'surface': '#0f1011',
-    'on-surface': '#f7f8f8',
-    'text-muted': '#8d9199',
-    'border': '#ffffff0d',
-    'error': '#ff5c5c',
-  };
-  
-  frontmatter.push('colors:');
-  const colorKeys = ['primary', 'secondary', 'tertiary', 'neutral', 'surface', 'on-surface', 'text-muted', 'border', 'error'];
-  colorKeys.forEach(key => {
-    const hex = colorMap[key] || colorDefaults[key];
-    frontmatter.push(`  ${key}: "${hex}"`);
-  });
-
-  // Typography
-  frontmatter.push('typography:');
-  Object.entries(typographyEntries).forEach(([key, val]) => {
-    frontmatter.push(`  ${key}:`);
-    frontmatter.push(`    fontFamily: "${val.fontFamily}"`);
-    frontmatter.push(`    fontSize: "${val.fontSize}"`);
-    frontmatter.push(`    fontWeight: ${val.fontWeight}`);
-    frontmatter.push(`    lineHeight: "${val.lineHeight}"`);
-    frontmatter.push(`    letterSpacing: "${val.letterSpacing}"`);
-    if (val.fontFallbacks) {
-      frontmatter.push(`    fontFallbacks: [${val.fontFallbacks.map((f: string) => `"${f}"`).join(', ')}]`);
-    }
-  });
-
-  // Rounded
-  frontmatter.push('rounded:');
-  Object.entries(roundedEntries).forEach(([key, val]) => {
-    frontmatter.push(`  ${key}: "${val}"`);
-  });
-
-  // Spacing
-  frontmatter.push('spacing:');
-  Object.entries(spacingEntries).forEach(([key, val]) => {
-    frontmatter.push(`  ${key}: "${val}"`);
-  });
-
-  // Components
-  frontmatter.push('components:');
-  Object.entries(componentEntries).forEach(([key, val]) => {
-    frontmatter.push(`  ${key}:`);
-    Object.entries(val).forEach(([prop, value]) => {
-      frontmatter.push(`    ${prop}: ${value}`);
-    });
-  });
-
-  frontmatter.push('---');
-  frontmatter.push('');
-
-  // Generate markdown content
-  const content: string[] = [];
-  content.push(`# ${formattedName}`);
-  content.push('');
-  content.push('## Overview');
-  content.push(`Design system extracted from ${url}. This document captures the visual language including colors, typography, spacing, and components for implementation consistency.`);
-  content.push('');
-
-  // Colors section
-  content.push('## Colors');
-  const primaryHex = colorMap['primary'] || '#7170ff';
-  const secondaryHex = colorMap['secondary'] || '#e5e5e6';
-  const tertiaryHex = colorMap['tertiary'] || colorMap['accent'] || '#8d9199';
-  const neutralHex = colorMap['neutral'] || '#08090a';
-  const surfaceHex = colorMap['surface'] || colorMap['background'] || '#0f1011';
-  const onSurfaceHex = colorMap['on-surface'] || colorMap['text'] || '#f7f8f8';
-  const textMutedHex = colorMap['text-muted'] || colorMap['text'] || '#8d9199';
-  const borderHex = colorMap['border'] || '#ffffff0d';
-  const errorHex = colorMap['error'] || '#ff5c5c';
-
-  content.push(`- **Primary (${primaryHex}):** The dominant brand color for emphasis and primary actions.`);
-  content.push(`- **Secondary (${secondaryHex}):** Supporting color for secondary elements and surfaces.`);
-  content.push(`- **Tertiary (${tertiaryHex}):** Muted tone for secondary text and less important elements.`);
-  content.push(`- **Neutral (${neutralHex}):** Dark canvas color anchoring the visual system.`);
-  content.push(`- **Surface (${surfaceHex}):** Elevated panel color for cards and inset content.`);
-  content.push(`- **On-surface (${onSurfaceHex}):** Primary text color for high contrast readability.`);
-  content.push(`- **Text-muted (${textMutedHex}):** Supporting text tone for labels and metadata.`);
-  content.push(`- **Border (${borderHex}):** Faint translucent edge for subtle structure.`);
-  content.push(`- **Error (${errorHex}):** Bright red for destructive states and alerts.`);
-  content.push('');
-
-  // Typography section
-  content.push('## Typography');
-  const font = tokens.typography.fonts[0];
-  content.push(`The system is built on ${font?.family || 'Inter'} with a clean sans-serif fallback stack. Headings use restrained weights for a modern feel; body copy is lighter and more open.`);
-  content.push('');
-
-  // Layout & Spacing
-  content.push('## Layout & Spacing');
-  if (tokens.spacing.length > 0) {
-    content.push('Spacing follows a deliberate ladder from compact to expansive:');
-    content.push(`- **xs** — ${spacingEntries['xs'] || tokens.spacing[0]?.value || '8px'} for tight internal rhythm`);
-    content.push(`- **sm** — ${spacingEntries['sm'] || tokens.spacing[1]?.value || '16px'} for standard separation`);
-    content.push(`- **md** — ${spacingEntries['md'] || tokens.spacing[2]?.value || '24px'} for section composition`);
-    content.push(`- **lg** — ${spacingEntries['lg'] || tokens.spacing[3]?.value || '40px'} for breathing room`);
-    content.push(`- **xl** — ${spacingEntries['xl'] || tokens.spacing[4]?.value || '64px'} for major section gaps`);
   }
-  content.push('');
+  if (onSurface) colors['on-surface'] = onSurface;
+  for (const key of ['primary', 'surface', 'on-surface']) {
+    if (!colors[key] && !notMeasured.some(n => n.startsWith(key))) notMeasured.push(`colors.${key}`);
+  }
 
-  // Elevation & Depth
-  content.push('## Elevation & Depth');
+  // Typography: only fields present in the measured scale.
+  const typeNames: Record<string, string> = {
+    h1: 'headline-display', h2: 'headline-lg', h3: 'headline-md', h4: 'headline-sm', p: 'body-lg', body: 'body-lg',
+  };
+  const fontFamily = tokens.typography.fonts[0]?.family;
+  const typography: Record<string, Record<string, string | number>> = {};
+  tokens.typography.scale.forEach(item => {
+    const key = typeNames[item.element.split(',')[0].trim()];
+    if (!key || typography[key] || !item.fontSize) return;
+    const entry: Record<string, string | number> = {};
+    if (fontFamily) entry.fontFamily = `"${fontFamily}"`;
+    entry.fontSize = `"${item.fontSize}"`;
+    if (item.fontWeight) entry.fontWeight = item.fontWeight;
+    if (item.lineHeight) entry.lineHeight = `"${item.lineHeight}"`;
+    typography[key] = entry;
+  });
+  if (Object.keys(typography).length === 0) notMeasured.push('typography');
+
+  // Spacing and radii: measured values only, in ascending order.
+  const spacingNames = ['xs', 'sm', 'md', 'lg', 'xl'];
+  const spacing: Record<string, string> = {};
+  if (tokens.spacing.length > 0 && tokens.spacing.every(s => spacingNames.includes(s.name))) {
+    tokens.spacing.forEach(s => { spacing[s.name] = s.value; });
+  } else {
+    const uniq = [...new Map(tokens.spacing.filter(s => s.px >= 2 && s.px <= 200).map(s => [s.value, s])).values()].sort((a, b) => a.px - b.px);
+    evenSample(uniq, 5).forEach((s, i) => { spacing[spacingNames[i]] = s.value; });
+  }
+  if (Object.keys(spacing).length === 0) notMeasured.push('spacing');
+
+  const roundedNames = ['sm', 'md', 'lg', 'xl', '2xl'];
+  const rounded: Record<string, string> = {};
+  const radii = [...new Map(tokens.borders.filter(b => b.px > 0).map(b => [b.radius, b])).values()].sort((a, b) => a.px - b.px);
+  evenSample(radii, 5).forEach((b, i) => { rounded[roundedNames[i]] = b.radius; });
+  if (Object.keys(rounded).length === 0) notMeasured.push('rounded');
+
+  // Components: buttons the page actually exposed, never invented ones.
+  const components: Record<string, Record<string, string>> = {};
+  tokens.buttons.forEach(btn => {
+    const bg = parseCssColor(btn.background);
+    let text = parseCssColor(btn.color);
+    const effectiveBg = bg || surface;
+    if (text && effectiveBg && contrastRatio(text, effectiveBg) < MIN_CONTRAST) {
+      notMeasured.push(`button-${btn.name}.textColor: ${text} on ${effectiveBg} fails ${MIN_CONTRAST}:1 contrast, so it is left out`);
+      text = null;
+    }
+    const entry: Record<string, string> = {};
+    if (bg) entry.backgroundColor = `"${bg}"`;
+    if (text) entry.textColor = `"${text}"`;
+    if (btn.borderRadius) entry.rounded = `"${btn.borderRadius}"`;
+    if (btn.padding) entry.padding = `"${btn.padding}"`;
+    if (Object.keys(entry).length > 0) components[`button-${btn.name}`] = entry;
+  });
+  if (Object.keys(components).length === 0) notMeasured.push('components');
+
+  const fm: string[] = ['---', 'version: alpha', `name: ${formattedName}`,
+    `description: Design values measured from ${url}. Values that could not be measured are omitted.`];
+  const block = (name: string, obj: Record<string, unknown>) => {
+    if (Object.keys(obj).length === 0) return;
+    fm.push(`${name}:`);
+    Object.entries(obj).forEach(([k, v]) => {
+      if (v && typeof v === 'object') {
+        fm.push(`  ${k}:`);
+        Object.entries(v as Record<string, unknown>).forEach(([p, pv]) => fm.push(`    ${p}: ${pv}`));
+      } else {
+        fm.push(`  ${k}: "${v}"`);
+      }
+    });
+  };
+  block('colors', colors);
+  block('typography', typography);
+  block('rounded', rounded);
+  block('spacing', spacing);
+  block('components', components);
+  fm.push('---', '');
+
+  const md: string[] = [`# ${formattedName}`, '', '## Provenance',
+    `Every value in this file was measured from ${url}. Nothing is filled in from a template. Anything that could not be measured is left out so you do not build on a guess.`, ''];
+  if (notMeasured.length > 0) {
+    md.push('Not measured:');
+    notMeasured.forEach(n => md.push(`- ${n}`));
+    md.push('');
+  }
+
+  if (Object.keys(colors).length > 0) {
+    md.push('## Colors');
+    if (colors['primary']) md.push(`- **Primary (${colors['primary']}):** accent colour measured on the page.`);
+    if (colors['surface']) md.push(`- **Surface (${colors['surface']}):** page background.`);
+    if (colors['on-surface']) md.push(`- **On-surface (${colors['on-surface']}):** body text colour${surface ? `, ${contrastRatio(colors['on-surface'], surface).toFixed(1)}:1 contrast on the surface` : ''}.`);
+    md.push('');
+  }
+  if (Object.keys(typography).length > 0) {
+    md.push('## Typography');
+    md.push(fontFamily ? `Primary font family: ${fontFamily}. Sizes, weights and line heights are in the frontmatter.` : 'Sizes, weights and line heights are in the frontmatter.');
+    md.push('');
+  }
+  if (Object.keys(spacing).length > 0) {
+    md.push('## Layout & Spacing');
+    Object.entries(spacing).forEach(([k, v]) => md.push(`- **${k}**: ${v}`));
+    md.push('');
+  }
   if (tokens.shadows.length > 0) {
-    content.push('Depth is created through tonal layering and borders rather than heavy shadows:');
-    tokens.shadows.slice(0, 3).forEach(s => {
-      content.push(`- **${s.usage}** — ${s.value}`);
-    });
-  } else {
-    content.push('Depth is extremely restrained. The system uses tonal layering, subtle borders, and contrast to create hierarchy without relying on large shadows.');
+    md.push('## Elevation & Depth');
+    tokens.shadows.slice(0, 3).forEach(s => md.push(`- **${s.usage}**: ${s.value}`));
+    md.push('');
   }
-  content.push('');
-
-  // Shapes
-  content.push('## Shapes');
-  if (tokens.borders.length > 0) {
-    const radii = tokens.borders.slice(0, 4).map(b => b.radius);
-    content.push(`Corner radii range from ${radii.join(' to ')}: buttons use full pill shapes while panels and cards use small to medium radii.`);
-  } else {
-    content.push('The shape language is soft but disciplined: buttons are fully pill-shaped, while panels and cards use small to medium radii.');
+  if (Object.keys(rounded).length > 0) {
+    md.push('## Shapes');
+    md.push(`Measured corner radii, smallest to largest: ${Object.values(rounded).join(', ')}.`);
+    md.push('');
   }
-  content.push('');
+  if (Object.keys(components).length > 0) {
+    md.push('## Components');
+    md.push(`Buttons measured on the page: ${Object.keys(components).join(', ')}.`);
+    md.push('');
+  }
 
-  // Components
-  content.push('## Components');
-  content.push('Buttons are the clearest expressive component. `button-primary` is a filled pill for the main action. `button-secondary` is a transparent companion button that preserves the pill geometry. `button-link` is minimal, text-only for inline actions.');
-  content.push('');
-  content.push('Cards use the surface color with a subtle border and small radius. They should feel like quiet containers rather than raised objects.');
-  content.push('');
+  md.push("## Do's and Don'ts");
+  md.push('- Do use the exact values in this file, and ask before inventing any that are missing');
+  md.push("- Don't fill gaps with defaults from another brand; check the Not measured list first");
+  md.push('');
+  md.push('---', '');
+  md.push('*Generated by [DED Design](https://ded-design.vercel.app). Extract, generate, export.*');
 
-  // Do's and Don'ts
-  content.push('## Do\'s and Don\'ts');
-  content.push('- Do use the exact hex codes provided — do not approximate colors');
-  content.push('- Do apply the typography scale exactly — do not invent new font sizes');
-  content.push('- Do use spacing tokens from the scale — avoid arbitrary pixel values');
-  content.push('- Do follow border radius values for consistent corner rounding');
-  content.push('- Do keep the design cohesive with the established color palette');
-  content.push("- Don't introduce colors outside the defined system without justification");
-  content.push("- Don't use border radii larger than the defined tokens allow");
-  content.push("- Don't make secondary text too bright or too large — hierarchy will flatten");
-  content.push('');
-  content.push('---');
-  content.push('');
-  content.push(`*Generated by [DED Design](https://sprint.dogeatdogstudio.com) — Extract • Generate • Export.*`);
-
-  return frontmatter.join('\n') + content.join('\n');
+  return fm.join('\n') + md.join('\n');
 }
+
 
 export async function extractAndGenerate(
   url: string,
