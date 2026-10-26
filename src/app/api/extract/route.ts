@@ -3,6 +3,7 @@ import { extractAndGenerate, type ExtractionLog } from '@/lib/scraper';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,13 +39,6 @@ export async function POST(request: NextRequest) {
         };
 
         try {
-          // Check if using context.dev
-          if (apiKey) {
-            sendEvent({ type: 'log', data: { timestamp: new Date().toISOString(), message: 'Using context.dev API for extraction...', type: 'info' } });
-          } else {
-            sendEvent({ type: 'log', data: { timestamp: new Date().toISOString(), message: 'No API key found, using local Puppeteer extraction...', type: 'info' } });
-          }
-
           // Extract with logging callback (passes API key to context.dev)
           const result = await extractAndGenerate(url, (log: ExtractionLog) => {
             sendEvent({ type: 'log', data: log });
